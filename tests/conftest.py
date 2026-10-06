@@ -87,10 +87,6 @@ def retorno_produtos_multiplos_testes(config):
     crt = config["crt"] 
     for produto in produtos_multiplos_testes:
         produto_copiado = produto.copy()
-        ean = produto_copiado["ean"]
-        codinterno = produto_copiado["codinterno"]
-        if (ean == "") or (len(ean) > 14) or not ean.isdigit():
-            produto_copiado["ean"] = codinterno
         produto_copiado["cMun"] = cmun 
         produto_copiado["regime"] = regime 
         produto_copiado["crt"] = crt 
