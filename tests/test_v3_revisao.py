@@ -1,7 +1,6 @@
 # Imports
 import requests
 import pytest
-import time 
 
 # Funções Auxiliares
 def gerar_produtos(produto_base, quantidade):

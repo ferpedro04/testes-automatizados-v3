@@ -2,6 +2,7 @@
 from dotenv import load_dotenv
 import os
 import pytest 
+from datetime import datetime, timedelta
 
 # Dados de teste
 produto_api = {
@@ -355,3 +356,115 @@ def retorno_cmun_invalido(config):
 @pytest.fixture(scope="module")
 def cache_respostas():
     return {}
+
+@pytest.fixture
+def params_atualizacoes(config):
+    date = datetime.now().strftime("%d-%m-%Y")
+    params = {
+        "regime": config["regime"],
+        "cMun": config["cmun"],
+        "crt": config["crt"],
+        "date": date 
+        }
+    return params
+
+@pytest.fixture
+def params_paginacao(params_atualizacoes):
+    params_paginacao = params_atualizacoes.copy()
+    params_paginacao["pagina"] = 2
+    params_paginacao["limite"] = 5
+    return params_paginacao
+
+@pytest.fixture
+def params_minimo(params_atualizacoes):
+    params_minimo = params_atualizacoes.copy()
+    params_minimo["limite"] = 1
+    return params_minimo
+
+@pytest.fixture
+def params_maximo(params_atualizacoes):
+    params_maximo = params_atualizacoes.copy()
+    params_maximo["limite"] = 300
+    return params_maximo
+
+@pytest.fixture
+def params_data_invalida(params_atualizacoes):
+    params_data_invalida = params_atualizacoes.copy()
+    params_data_invalida["date"] = "2026-10-14"
+    return params_data_invalida
+
+@pytest.fixture
+def params_data_ausente(params_atualizacoes):
+    params_data_ausente = params_atualizacoes.copy()
+    params_data_ausente.pop("date")
+    return params_data_ausente
+
+@pytest.fixture
+def params_data_antiga(params_atualizacoes):
+    params_data_antiga = params_atualizacoes.copy()
+    params_data_antiga["date"] = (datetime.now() - timedelta(days=8)).strftime("%d-%m-%Y")
+    return params_data_antiga
+
+@pytest.fixture
+def params_data_superior(params_atualizacoes):
+    params_data_superior = params_atualizacoes.copy()
+    params_data_superior["date"] = (datetime.now() + timedelta(days=1)).strftime("%d-%m-%Y")
+    return params_data_superior
+
+@pytest.fixture
+def params_regime_invalido(params_atualizacoes):
+    params_regime_invalido = params_atualizacoes.copy()
+    params_regime_invalido["regime"] = "invalido"
+    return params_regime_invalido
+
+@pytest.fixture
+def params_regime_ausente(params_atualizacoes):
+    params_regime_ausente = params_atualizacoes.copy()
+    params_regime_ausente.pop("regime")
+    return params_regime_ausente
+
+@pytest.fixture
+def params_crt_invalido(params_atualizacoes):
+    params_crt_invalido = params_atualizacoes.copy()
+    params_crt_invalido["crt"] = 86
+    return params_crt_invalido
+
+@pytest.fixture
+def params_crt_regime_invalidos(params_atualizacoes):
+    params_crt_regime_invalidos = params_atualizacoes.copy()
+    params_crt_regime_invalidos["crt"] = 3
+    return params_crt_regime_invalidos
+
+@pytest.fixture
+def params_cmun_invalido(params_atualizacoes):
+    params_cmun_invalido = params_atualizacoes.copy()
+    params_cmun_invalido["cMun"] = 9999999
+    return params_cmun_invalido
+
+@pytest.fixture
+def params_pagina_invalida(params_atualizacoes):
+    params_pagina_invalida = params_atualizacoes.copy()
+    params_pagina_invalida["pagina"] = -1
+    return params_pagina_invalida
+
+@pytest.fixture
+def params_abaixo_minimo(params_atualizacoes):
+    params_abaixo_minimo = params_atualizacoes.copy()
+    params_abaixo_minimo["limite"] = -10
+    return params_abaixo_minimo
+
+@pytest.fixture
+def params_acima_maximo(params_atualizacoes):
+    params_acima_maximo = params_atualizacoes.copy()
+    params_acima_maximo["limite"] = 350
+    return params_acima_maximo
+
+@pytest.fixture
+def url_atualizacoes_token_invalido(config):
+    url = f"{config['url_base']}/atualizacoes/{config['id_parceiro']}/{config['cnpj']}/token_invalido"
+    return url
+
+@pytest.fixture
+def url_atualizacoes_cnpj_invalido(config):
+    url = f"{config['url_base']}/atualizacoes/{config['id_parceiro']}/11111111111111/{config['token']}"
+    return url
