@@ -2,7 +2,7 @@
 import requests
 import pytest
 import math
-
+from datetime import datetime, timedelta
 
 # Bloco 1 - Teste de sucesso HTTP 200, Erro 0 e Mensagem
 def test_atualizacoes_status_200(config, params_atualizacoes, cache_respostas):
@@ -294,13 +294,16 @@ def test_data_superior_erro(config, params_data_superior, cache_respostas):
 
 def test_data_superior_mensagem(config, params_data_superior, cache_respostas):
     url = f"{config['url_base']}/atualizacoes/{config['id_parceiro']}/{config['cnpj']}/{config['token']}"
+    hoje = datetime.now()
+    data_mensagem = (hoje - timedelta(days=7)).strftime("%d-%m-%Y")
     if "cache_data_superior" not in cache_respostas:
         print("FAZENDO REQUEST - GET DATA SUPERIOR")
         response = requests.get(url, params=params_data_superior)
         cache_respostas["cache_data_superior"] = response
     response = cache_respostas["cache_data_superior"] 
     dados = response.json()
-    assert dados["mensagem"] == "Data inválida: não é possível consultar datas futuras. Informe uma data entre 08-10-2026 e hoje (15-10-2026), no formato DD-MM-AAAA."
+    print(dados)
+    assert dados["mensagem"] == f"Data inválida: não é possível consultar datas futuras. Informe uma data entre {data_mensagem} e hoje ({hoje.strftime("%d-%m-%Y")}), no formato DD-MM-AAAA."
 
 # Bloco 9 - Validação de regime inválido
 def test_regime_invalido_status(config, params_regime_invalido, cache_respostas):
