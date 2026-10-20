@@ -27,22 +27,26 @@ projeto/
 ├── tests/
 │   ├── conftest.py
 │   ├── test_v3_revisao.py
-│   └── test_v3_atualizacao.py
+│   ├── test_v3_atualizacao.py
+│   └── test_v3_rate_limit.py
 ├── .env
 ├── .env.example
 ├── .gitignore
+├── pytest.ini
 ├── requirements.txt
 └── README.md
 ```
 
-- **`tests/conftest.py`** — Centraliza configurações, dados de teste e fixtures reutilizadas pelas suítes.
-- **`tests/test_v3_revisao.py`** — Contém os cenários positivos e negativos do endpoint de Revisão Fiscal.
-- **`tests/test_v3_atualizacao.py`** — Contém os cenários positivos e negativos do endpoint de Atualizações, incluindo paginação e limites.
-- **`.env`** — Armazena as configurações e credenciais utilizadas nos testes. Contém informações sensíveis e não deve ser versionado.
-- **`.env.example`** — Modelo das variáveis de ambiente necessárias para executar o projeto, sem expor credenciais reais.
-- **`.gitignore`** — Define os arquivos e diretórios que não devem ser versionados pelo Git.
-- **`requirements.txt`** — Lista as dependências e respectivas versões necessárias para executar o projeto.
-- **`README.md`** — Documentação de instalação, configuração, execução e organização da suíte.
+- **`tests/conftest.py`** — Centraliza configurações, dados de teste e fixtures compartilhadas entre as suítes.
+- **`tests/test_v3_revisao.py`** — Contém os testes positivos e negativos do endpoint de Revisão Fiscal.
+- **`tests/test_v3_atualizacao.py`** — Contém os testes positivos e negativos do endpoint de Atualizações, incluindo paginação e validação de parâmetros.
+- **`tests/test_v3_rate_limit.py`** — Contém os testes específicos do mecanismo de bloqueio dos endpoints de Revisão e Atualizações, separados da regressão padrão.
+- **`.env`** — Armazena configurações e credenciais de acesso à API, incluindo as credenciais exclusivas de Rate Limit. Não deve ser versionado.
+- **`.env.example`** — Modelo das variáveis de ambiente necessárias para executar o projeto, sem credenciais reais.
+- **`.gitignore`** — Define os arquivos e diretórios que não devem ser versionados.
+- **`pytest.ini`** — Registra o marcador `rate_limit` e configura a exclusão desses testes da execução padrão.
+- **`requirements.txt`** — Lista as dependências e versões utilizadas no projeto.
+- **`README.md`** — Documenta a instalação, configuração, execução e manutenção da suíte.
 
 ## Instalação e configuração
 
@@ -88,6 +92,8 @@ TOKEN=
 CMUN=
 REGIME=
 CRT=
+CNPJ_RATE_LIMIT=
+TOKEN_RATE_LIMIT=
 ```
 
 Preencha os valores correspondentes ao ambiente de testes autorizado.
@@ -99,6 +105,18 @@ Preencha os valores correspondentes ao ambiente de testes autorizado.
 O projeto separa os testes de Revisão Fiscal e de Atualizações em arquivos diferentes.
 
 As configurações e fixtures compartilhadas são centralizadas em `conftest.py`, facilitando a reutilização dos dados e a manutenção da suíte.
+
+### Isolamento dos testes de Rate Limit
+
+Os testes de Rate Limit são mantidos em `tests/test_v3_rate_limit.py` e identificados pelo marcador `pytest.mark.rate_limit`.
+
+O arquivo `pytest.ini` utiliza a configuração `addopts = -m "not rate_limit"` para excluir esses testes da regressão padrão.
+
+O objetivo é impedir que a execução habitual da suíte provoque bloqueios temporários no CNPJ utilizado nos testes de Revisão Fiscal e Atualizações.
+
+As requisições de Rate Limit utilizam credenciais específicas, carregadas pelas variáveis `CNPJ_RATE_LIMIT` e `TOKEN_RATE_LIMIT`.
+
+Diferentemente das validações de regressão que reutilizam respostas em cache, os testes de Rate Limit realizam requisições HTTP reais e consecutivas, pois precisam observar o comportamento do mecanismo de bloqueio.
 
 ### Reutilização de requisições
 
@@ -291,12 +309,110 @@ Ao adicionar novos testes ao projeto:
 - Não utilizar `pytest.skip()` para esconder defeitos reais.
 - Executar a regressão completa após alterações significativas na suíte.
 
-## Próxima etapa — Testes de Rate Limit
+## Testes de Rate Limit — API V3
 
-O projeto será expandido para incluir testes específicos do mecanismo de bloqueio dos endpoints de Revisão Fiscal e Atualizações.
+O Rate Limit é um mecanismo de proteção da API que controla requisições inválidas e aplica bloqueios temporários quando determinadas condições são atingidas.
 
-Essa etapa contemplará erros consecutivos, HTTP 429, header `Retry-After`, metadados de bloqueio e reinicialização do contador após uma requisição válida.
+A suíte automatizada contempla os endpoints:
 
-**Os testes de Rate Limit deverão ficar isolados da regressão padrão**, pois podem provocar o bloqueio temporário das credenciais utilizadas nas consultas.
+- **POST `/revisao`**
+- **GET `/atualizacoes`**
 
-A implementação, os comandos de execução e as configurações específicas serão documentados após a conclusão dessa etapa.
+### Comportamento do mecanismo
+
+Conforme as regras confirmadas com o desenvolvedor responsável, o mecanismo mantém controles distintos para erros consecutivos e bloqueios.
+
+Uma requisição válida zera o contador de erros consecutivos, mas não cancela um bloqueio ativo nem necessariamente reinicia o histórico de penalidades.
+
+No cenário validado, a sequência de respostas é:
+
+| Requisição | HTTP esperado |
+|---|---|
+| Primeira inválida | 400 |
+| Segunda inválida | 400 |
+| Requisição válida | 200 |
+| Terceira inválida | 429 |
+
+O histórico de bloqueios possui penalidades progressivas. Foram observados bloqueios de 5, 10, 15 minutos e durações superiores.
+
+A política de expiração ou reinicialização desse histórico ainda precisa ser esclarecida.
+
+### Cenários implementados
+
+**Bloco 1 — Rate Limit em Atualizações**
+
+Executa três requisições GET inválidas utilizando parâmetros fora dos limites aceitos. Verifica HTTP 400 ou 429 e exige a ocorrência de pelo menos uma resposta de bloqueio.
+
+**Bloco 2 — Rate Limit em Revisão Fiscal**
+
+Executa três requisições POST com EAN alfanumérico inválido. Verifica as respostas e os metadados de bloqueio.
+
+**Bloco 3 — Contadores em Atualizações**
+
+Valida a sequência de requisições inválidas e válidas, incluindo o HTTP 429 na terceira tentativa inválida contabilizada para bloqueio.
+
+**Bloco 4 — Contadores em Revisão Fiscal**
+
+Aplica a mesma sequência de validação utilizando requisições POST.
+
+Os Blocos 3 e 4 verificam o comportamento HTTP observado. Como os contadores internos não são expostos nas respostas, não é possível comprovar diretamente seus valores somente com esses testes.
+
+### Validações do HTTP 429
+
+A função auxiliar `validar_resposta_bloqueio()` centraliza as validações dos campos comuns:
+
+- `erro`
+- `mensagem`
+- `minutos_bloqueio`
+- `aguardar_segundos`
+- `bloqueio_iniciado_em`
+- `liberado_em`
+
+Os campos `motivo` e `rota` são validados individualmente nos respectivos testes.
+
+Também é validada a presença do header `Retry-After` e sua correspondência com `aguardar_segundos`, considerando o primeiro valor quando o header apresenta valores separados por vírgula.
+
+### Execução controlada
+
+**Os testes de Rate Limit não devem ser executados indiscriminadamente**, pois alteram temporariamente o estado de bloqueio do CNPJ.
+
+A execução recomendada é realizada por endpoint, em pares:
+
+1. Executar o teste de contadores em um ambiente sem bloqueio ativo.
+2. Aproveitar o bloqueio provocado para executar o teste de resposta HTTP 429.
+3. Respeitar o período de liberação antes de iniciar outro cenário que dependa de um estado desbloqueado.
+
+#### Atualizações — Teste dos contadores
+
+```powershell
+python -m pytest tests/test_v3_rate_limit.py::test_reset_rate_limit_atualizacoes -m rate_limit -v -s
+```
+
+#### Atualizações — Validação do bloqueio
+
+```powershell
+python -m pytest tests/test_v3_rate_limit.py::test_rate_limit_atualizacoes -m rate_limit -v -s
+```
+
+#### Revisão — Teste dos contadores
+
+```powershell
+python -m pytest tests/test_v3_rate_limit.py::test_reset_rate_limit_revisao -m rate_limit -v -s
+```
+
+#### Revisão — Validação do bloqueio
+
+```powershell
+python -m pytest tests/test_v3_rate_limit.py::test_rate_limit_revisao -m rate_limit -v -s
+```
+
+### Cuidados importantes
+
+- Utilizar exclusivamente credenciais autorizadas para os testes de Rate Limit.
+- Não executar testes de bloqueio com o CNPJ da regressão padrão.
+- Evitar execuções repetidas enquanto houver penalidades ativas.
+- Não considerar uma requisição válida HTTP 200 como comprovação de término de bloqueio.
+- Executar os testes de contadores apenas em condições iniciais adequadas.
+- Considerar que a duração das penalidades pode aumentar progressivamente.
+- Não executar os quatro testes em sequência sem controlar as pré-condições de cada endpoint.
+- Não utilizar o marcador `rate_limit` indiscriminadamente para executar todos os cenários em conjunto.

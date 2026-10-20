@@ -47,7 +47,6 @@ produto_erro = {
 
 # Carregamento da Env
 load_dotenv()
-
 url_base = os.getenv("URL_BASE")
 id_parceiro = int(os.getenv("ID_PARCEIRO"))
 cnpj = os.getenv("CNPJ")
@@ -55,6 +54,8 @@ token = os.getenv("TOKEN")
 cmun = os.getenv("CMUN")
 regime = os.getenv("REGIME")
 crt = int(os.getenv("CRT"))
+cnpj_rate_limit = os.getenv("CNPJ_RATE_LIMIT")
+token_rate_limit = os.getenv("TOKEN_RATE_LIMIT")
 
 # Criação das Fixtures
 @pytest.fixture
@@ -68,6 +69,17 @@ def config():
         "regime": regime,
         "crt": crt
     }
+
+@pytest.fixture
+def config_rl(config):
+    config_rl = config.copy()
+    config_rl["cnpj"] = cnpj_rate_limit
+    config_rl["token"] = token_rate_limit
+    assert config_rl["cnpj"]
+    assert config_rl["token"]
+    assert config_rl["cnpj"] != config["cnpj"]
+    assert config_rl["token"] != config["token"]
+    return config_rl
 
 @pytest.fixture
 def retorno_produto_api(config):
