@@ -2,6 +2,7 @@
 from dotenv import load_dotenv
 import os
 import pytest 
+import requests
 from datetime import datetime, timedelta
 
 # Dados de teste
@@ -56,6 +57,8 @@ regime = os.getenv("REGIME")
 crt = int(os.getenv("CRT"))
 cnpj_rate_limit = os.getenv("CNPJ_RATE_LIMIT")
 token_rate_limit = os.getenv("TOKEN_RATE_LIMIT")
+token_liberacao_rate_limit = os.getenv("TOKEN_LIBERACAO_RATE_LIMIT")
+operador_rate_limit = os.getenv("OPERADOR_RATE_LIMIT")
 
 # Criação das Fixtures
 @pytest.fixture
@@ -80,6 +83,15 @@ def config_rl(config):
     assert config_rl["cnpj"] != config["cnpj"]
     assert config_rl["token"] != config["token"]
     return config_rl
+
+@pytest.fixture
+def config_liberacao_rl(config_rl):
+    ip_publico = requests.get("https://api.ipify.org", timeout=10).text.strip()
+    url = f"{config_rl['url_base']}/interno/penalidade/liberar/1/{config_rl['cnpj']}/?ip={ip_publico}&operador={operador_rate_limit}"
+    headers = {
+    "Authorization": f"Bearer {token_liberacao_rate_limit}"
+}
+    return url, headers
 
 @pytest.fixture
 def retorno_produto_api(config):

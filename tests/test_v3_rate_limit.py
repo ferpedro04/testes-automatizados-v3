@@ -38,11 +38,8 @@ def test_rate_limit_atualizacoes(config_rl, params_abaixo_minimo):
     respostas.append(response)
 
     bloqueio_encontrado = False
-    for tentativa, response in enumerate(respostas, start=1):
-        print(f"Tentativa {tentativa}: HTTP {response.status_code}")
-        print(f"Resposta {tentativa}: {response.json()}")
+    for response in respostas:
         retry_after = response.headers.get("Retry-After")
-        print(f"Tentativa {tentativa} - Retry-After: {retry_after}")
         assert response.status_code in (400, 429)
         if response.status_code == 429:
             bloqueio_encontrado = True
@@ -70,11 +67,8 @@ def test_rate_limit_revisao(config_rl, retorno_ean_alfanumerico):
     respostas.append(response)
 
     bloqueio_encontrado = False
-    for tentativa, response in enumerate(respostas, start=1):
-        print(f"Tentativa {tentativa}: HTTP {response.status_code}")
-        print(f"Resposta {tentativa}: {response.json()}")
+    for response in respostas:
         retry_after = response.headers.get("Retry-After")
-        print(f"Tentativa {tentativa} - Retry-After: {retry_after}")
         assert response.status_code in (400, 429)
         if response.status_code == 429:
             bloqueio_encontrado = True
@@ -114,4 +108,13 @@ def test_reset_rate_limit_revisao(config_rl, retorno_produto_api, retorno_ean_al
     assert response_valida_revisao.status_code == 200
     response_invalida_3_revisao = requests.post(url, json=retorno_ean_alfanumerico)
     assert response_invalida_3_revisao.status_code == 429
-    
+
+# Bloco 5 - Liberação de CNPJ para testes de Rate Limit
+def test_liberacao_cnpj(config_liberacao_rl):
+    url, headers = config_liberacao_rl
+    response = requests.post(url, headers=headers)
+    dados = response.json()
+    assert response.status_code == 200
+    assert dados["erro"] == 0
+    print(response.status_code)
+    print(response.text)
