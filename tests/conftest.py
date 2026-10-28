@@ -46,6 +46,44 @@ produto_erro = {
     "descricao": "FORT-MEN 550MG CPR 120UN",
 }
 
+produtos_contrato = [
+    {
+    "codinterno": "1", 
+    "ean": "7506195147382", 
+    "descricao": "Absorvente Always 16 unid", 
+},
+    {
+    "codinterno": "2", 
+    "ean": "4005808555277", 
+    "descricao": "Bloqueador Solar Nivea Sun FPS30 200 ml", 
+},
+    {
+    "codinterno": "3", 
+    "ean": "7500435146487", 
+    "descricao": "Fralda Pampers Ajuste Total Pants G c/72", 
+},
+    {
+    "codinterno": "4", 
+    "ean": "7896255763356", 
+    "descricao": "Kaletra 100+25mg c/120 comp", 
+},
+    {
+    "codinterno": "5", 
+    "ean": "7897947606500", 
+    "descricao": "Lavitan Mulher 60 drg", 
+},
+    {
+    "codinterno": "6", 
+    "ean": "9788598078373", 
+    "descricao": "Livro A Menina que Roubava Livros (Avon)", 
+},
+    {
+    "codinterno": "7", 
+    "ean": "7896070607736", 
+    "descricao": "Novalgina 1g 10 cp", 
+}
+]
+
 # Carregamento da Env
 load_dotenv()
 url_base = os.getenv("URL_BASE")
@@ -492,3 +530,21 @@ def url_atualizacoes_token_invalido(config):
 def url_atualizacoes_cnpj_invalido(config):
     url = f"{config['url_base']}/atualizacoes/{config['id_parceiro']}/11111111111111/{config['token']}"
     return url
+
+@pytest.fixture
+def retorno_produtos_contrato(config):
+    produtos_copiados = []
+    for produto in produtos_contrato:
+        produto_copiado = produto.copy()
+        produto_copiado["cMun"] = config["cmun"]
+        produto_copiado["regime"] = config["regime"]
+        produto_copiado["crt"] = config["crt"]
+        produto_copiado["filiais"] = []
+        produto_copiado["csosn"] = "000"
+        produto_copiado["ncm"] = "00000000"
+        produto_copiado["cfop"] = "0000"
+        produto_copiado["pICMS"] = 0
+        produto_copiado["cst_pis_saida"] = "00"
+        produto_copiado["cst_cofins_saida"] = "00"
+        produtos_copiados.append(produto_copiado)
+    return produtos_copiados
