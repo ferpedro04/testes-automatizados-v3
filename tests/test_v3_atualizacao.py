@@ -102,7 +102,10 @@ def test_pagina_2(config, params_paginacao, cache_respostas):
         cache_respostas["cache_paginacao_2"] = response
     response = cache_respostas["cache_paginacao_2"] 
     dados = response.json()
-    if dados["mensagem"] == "pagina inválida. Esta consulta não tem atualizações; use pagina 1.":
+    print(f"Status HTTP: {response.status_code}")
+    print(f"Mensagem: {dados.get('mensagem')}")
+    print(f"Chaves retornadas: {list(dados.keys())}")
+    if "não tem atualizações" in dados["mensagem"] or "tem 1 página" in dados["mensagem"]:
         pytest.skip("Massa de dados insuficiente para validar a segunda página")
     assert dados["paginacao"]["pagina_atual"] == params_paginacao["pagina"]
 
@@ -114,7 +117,7 @@ def test_limite_paginacao(config, params_paginacao, cache_respostas):
         cache_respostas["cache_paginacao_2"] = response
     response = cache_respostas["cache_paginacao_2"] 
     dados = response.json()
-    if dados["mensagem"] == "pagina inválida. Esta consulta não tem atualizações; use pagina 1.":
+    if "não tem atualizações" in dados["mensagem"] or "tem 1 página" in dados["mensagem"]:
         pytest.skip("Massa de dados insuficiente para validar a segunda página")
     assert dados["paginacao"]["limite_por_pagina"] == params_paginacao["limite"]
 
@@ -126,7 +129,7 @@ def test_quantidade_itens_paginacao(config, params_paginacao, cache_respostas):
         cache_respostas["cache_paginacao_2"] = response
     response = cache_respostas["cache_paginacao_2"] 
     dados = response.json()
-    if dados["mensagem"] == "pagina inválida. Esta consulta não tem atualizações; use pagina 1.":
+    if "não tem atualizações" in dados["mensagem"] or "tem 1 página" in dados["mensagem"]:
         pytest.skip("Massa de dados insuficiente para validar a segunda página")
     pagina_atual = dados["paginacao"]["pagina_atual"]
     total_registros = dados["paginacao"]["total_registros"]
@@ -145,7 +148,7 @@ def test_navegacao_proxima_pagina(config, params_paginacao, cache_respostas):
         cache_respostas["cache_paginacao_2"] = response
     response = cache_respostas["cache_paginacao_2"] 
     dados = response.json()
-    if dados["mensagem"] == "pagina inválida. Esta consulta não tem atualizações; use pagina 1.":
+    if "não tem atualizações" in dados["mensagem"] or "tem 1 página" in dados["mensagem"]:
             pytest.skip("Massa de dados insuficiente para validar a segunda página")
     proxima_pagina = dados["paginacao"]["proxima_pagina"]
     print(dados["paginacao"])
